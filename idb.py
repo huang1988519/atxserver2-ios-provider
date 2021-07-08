@@ -96,7 +96,15 @@ class Tracker():
 
     @run_on_executor(executor='executor')
     def list_devices(self):
-        return list_devices()
+        all_devices = list_devices()
+        if os.path.exists('.exclude'):
+            with open('.exclude','r') as f:
+                ll = f.readlines()
+                for l in ll:
+                    if l in all_devices:
+                        print('黑名单: %s' %l)
+                        all_devices.remove(l)
+        return all_devices
 
     @gen.coroutine
     def update(self):
@@ -337,8 +345,8 @@ class WDADevice(object):
             self._wda_port = freeport.get()
             self._mjpeg_port = freeport.get()
             self.run_background(
-                ["./iproxy.sh",
-                 str(self._wda_port), "8100", self.udid],
+                ["iproxy",
+                 str(self._wda_port), "8100",'-u',self.udid],
                 silent=True)
             self.run_background(
                 ["./iproxy.sh",
