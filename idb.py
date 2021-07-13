@@ -349,8 +349,8 @@ class WDADevice(object):
                  str(self._wda_port), "8100",'-u',self.udid],
                 silent=True)
             self.run_background(
-                ["./iproxy.sh",
-                 str(self._mjpeg_port), "9100", self.udid],
+                ["iproxy",
+                 str(self._mjpeg_port), "9100",'-u', self.udid],
                 silent=True)
 
             self.restart_wda_proxy()
