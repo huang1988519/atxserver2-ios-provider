@@ -27,6 +27,18 @@ from typing import Union
 idevices = {}
 hbc = None
 
+def rebot_send(content:str):
+    webhook = 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=c401a033-b602-4690-bc30-594767159d04'
+    body = {
+        'msgtype':'text',
+        'text': {
+            'content':content
+        }
+    }
+    import json
+    data = json.dumps(body);
+    res = requests.post(webhook,data=data)
+    print(res.text)
 
 class CorsMixin(object):
     CORS_ORIGIN = '*'
@@ -245,6 +257,7 @@ async def device_watch(wda_directory: str, manually_start_wda: bool, use_tidevic
         else:  # offline
             await idevices[event.udid].stop()
             idevices.pop(event.udid)
+            rebot_send('【设备离线报警】\nAgent:  %s \niOS:  %s' %(current_ip(),event.udid))
 
 
 async def async_main():

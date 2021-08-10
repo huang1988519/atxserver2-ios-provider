@@ -25,6 +25,19 @@ from freeport import freeport
 
 DeviceEvent = namedtuple('DeviceEvent', ['present', 'udid'])
 
+wda_port_cache = {}
+def get_wda_port(udid):
+    if udid in wda_port_cache:
+        port = wda_port_cache[udid]
+        print('read wda port: %d' %port)
+        return port
+    return None
+
+def set_wda_port(udid,port):
+    print('%s:%s' %(udid,port))
+    if len(wda_port_cache) > 50:
+        wda_port_cache.clear()
+    wda_port_cache[udid] = port
 
 def runcommand(*args) -> str:
     try:
@@ -182,7 +195,7 @@ class WDADevice(object):
         self.product = udid2product(udid)
         self.wda_directory = "./ATX-WebDriverAgent"
         self._procs = []
-        self._wda_proxy_port = None
+        self._wda_proxy_port =get_wda_port(udid)
         self._wda_proxy_proc = None
         self._lock = lock  # only allow one xcodebuild test run
         self._finished = locks.Event()
@@ -191,6 +204,8 @@ class WDADevice(object):
         self.manually_start_wda = False
         self.use_tidevice = False
         self.wda_bundle_pattern = "*WebDriverAgent*"
+        self._wda_port = None
+        self._mjpeg_port = None
 
     @property
     def udid(self) -> str:
@@ -223,6 +238,8 @@ class WDADevice(object):
         await self._finished.wait()
         logger.debug("%s wda stopped!", self)
         self._finished.clear()
+        if self._wda_proxy_proc:
+            self._wda_proxy_proc.terminate()
 
     async def run_wda_forever(self):
         """
@@ -293,7 +310,7 @@ class WDADevice(object):
                 if last_ip != self.device_ip:
                     last_ip = self.device_ip
                     await self._callback(self.status_ready, self.__wda_info)
-                await self._sleep(60)
+                await self._sleep(30)
                 logger.debug("%s is fine", self)
             else:
                 fail_cnt += 1
@@ -335,8 +352,8 @@ class WDADevice(object):
             #    WebDriverAgentRunner-Runner.app encountered an error (Failed to install or launch the test
             #    runner. (Underlying error: Only directories may be uploaded. Please try again with a directory
             #    containing items to upload to the application_s sandbox.))
-            self._wda_port = freeport.get()
-            self._mjpeg_port = freeport.get()
+            self._wda_port = freeport.get(self._wda_port)
+            self._mjpeg_port = freeport.get(self._mjpeg_port)
             cmd = [
                 'xcodebuild', '-project',
                 os.path.join(self.wda_directory, 'WebDriverAgent.xcodeproj'),
@@ -388,7 +405,7 @@ class WDADevice(object):
     def restart_wda_proxy(self):
         if self._wda_proxy_proc:
             self._wda_proxy_proc.terminate()
-        self._wda_proxy_port = freeport.get()
+        self._wda_proxy_port = freeport.get(self._wda_proxy_port)
         logger.debug("restart wdaproxy with port: %d", self._wda_proxy_port)
         self._wda_proxy_proc = subprocess.Popen([
             sys.executable, "-u", "wdaproxy-script.py",
@@ -396,6 +413,7 @@ class WDADevice(object):
             "--wda-url", "http://localhost:{}".format(self._wda_port),
             "--mjpeg-url", "http://localhost:{}".format(self._mjpeg_port)],
             stdout=subprocess.DEVNULL)  # yapf: disable
+        set_wda_port(self.udid,self._wda_proxy_port)
 
     async def wait_until_ready(self, timeout: float = 60.0) -> bool:
         """

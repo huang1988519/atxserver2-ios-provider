@@ -10,8 +10,11 @@ class FreePort(object):
         self._end = 40000
         self._now = self._start-1
 
-    def get(self):
+    def get(self,default = None):
         while True:
+            if default and not self.is_port_in_use(default):
+                return default
+
             self._now += 1
             if self._now > self._end:
                 self._now = self._start
