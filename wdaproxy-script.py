@@ -15,7 +15,7 @@ import tornado.web
 from tornado.log import enable_pretty_logging
 from tornado.websocket import WebSocketHandler
 from tornado.iostream import IOStream
-
+from logzero import logger
 
 class MjpegReader():
     """
@@ -153,6 +153,7 @@ def main():
         (r"/screen", ScreenWSHandler),
         (r"/.*", ReverseProxyHandler),
     ])
+    logger.info('wdaproxy-script run on port: {}'.format(args.port))
     app.listen(args.port)
 
     enable_pretty_logging()

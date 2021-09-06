@@ -34,7 +34,7 @@ def get_wda_port(udid):
     return None
 
 def set_wda_port(udid,port):
-    print('%s:%s' %(udid,port))
+    logger.debug('cache(%s:%s)' %(udid,port))
     if len(wda_port_cache) > 50:
         wda_port_cache.clear()
     wda_port_cache[udid] = port
@@ -281,8 +281,8 @@ class WDADevice(object):
     def destroy(self):
         logger.debug("terminate wda processes")
         for p in self._procs:
-            logger.debug(p.args)
-            p.terminate()
+            logger.debug(f'kill: {p.args}')
+            p.kill()
         self._procs = []
 
     async def _sleep(self, timeout: float):
@@ -375,22 +375,23 @@ class WDADevice(object):
             elif self.use_tidevice:
                 # 明确使用 tidevice 命令启动 wda
                 logger.info("Got param --use-tidevice , use tidevice to launch wda")
-                tidevice_cmd = ['tidevice', '-u', self.udid, 'wdaproxy', '-B', self.wda_bundle_pattern, '--port', '0']
-                self.run_background(tidevice_cmd, stdout=subprocess.DEVNULL,
-                                    stderr=subprocess.STDOUT)
+                # tidevice_cmd = ['tidevice', '-u', self.udid, 'wdaproxy', '-B', self.wda_bundle_pattern, '--port', '0']
+                tidevice_cmd = ['tidevice', '-u', self.udid, 'wdaproxy', '--port', '0']
+                self.run_background(subprocess.list2cmdline(tidevice_cmd), stdout=subprocess.DEVNULL,
+                                    stderr=subprocess.STDOUT,shell=True)
             else:
                 self.run_background(
                     cmd, stdout=subprocess.DEVNULL,
                     stderr=subprocess.STDOUT)  # cwd='Appium-WebDriverAgent')
             if "Simulator" not in self.product:
                 self.run_background(
-                    ["iproxy",
-                     str(self._wda_port), "8100", '-u',self.udid],
-                    silent=True)
+                    subprocess.list2cmdline(["iproxy",
+                     str(self._wda_port), "8100", '-u',self.udid]),
+                    silent=True,shell=True)
                 self.run_background(
-                    ["iproxy",
-                     str(self._mjpeg_port), "9100", '-u', self.udid],
-                    silent=True)
+                    subprocess.list2cmdline(["iproxy",
+                     str(self._mjpeg_port), "9100", '-u', self.udid]),
+                    silent=True,shell=True)
 
             self.restart_wda_proxy()
             return await self.wait_until_ready()
@@ -399,7 +400,7 @@ class WDADevice(object):
         if kwargs.pop("silent", False):
             kwargs['stdout'] = subprocess.DEVNULL
             kwargs['stderr'] = subprocess.DEVNULL
-        logger.debug("exec: %s", subprocess.list2cmdline(args[0]))
+        logger.debug("exec: %s", args[0])
         p = subprocess.Popen(*args, **kwargs)
         self._procs.append(p)
 
@@ -409,12 +410,12 @@ class WDADevice(object):
             time.sleep(3) # 等待释放端口
         self._wda_proxy_port = freeport.get(self._wda_proxy_port)
         logger.debug("restart wdaproxy with port: %d", self._wda_proxy_port)
-        self._wda_proxy_proc = subprocess.Popen([
+        self._wda_proxy_proc = subprocess.Popen(subprocess.list2cmdline([
             sys.executable, "-u", "wdaproxy-script.py",
             "-p", str(self._wda_proxy_port),
             "--wda-url", "http://localhost:{}".format(self._wda_port),
-            "--mjpeg-url", "http://localhost:{}".format(self._mjpeg_port)],
-            stdout=subprocess.DEVNULL)  # yapf: disable
+            "--mjpeg-url", "http://localhost:{}".format(self._mjpeg_port)]),
+            stdout=subprocess.DEVNULL,shell=True)  # yapf: disable
         set_wda_port(self.udid,self._wda_proxy_port)
 
     async def wait_until_ready(self, timeout: float = 60.0) -> bool:
