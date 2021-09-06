@@ -317,7 +317,7 @@ class WDADevice(object):
                 fail_cnt += 1
                 logger.warning("%s wda ping error: %d", self, fail_cnt)
                 if fail_cnt > 3:
-                    logger.warning("ping wda fail too many times, restart wda")
+                    logger.warning("%s ping wda fail too many times, restart wda" %self)
                     break
                 await self._sleep(10)
 
@@ -371,7 +371,7 @@ class WDADevice(object):
                 cmd = ['tins', '-u', self.udid, 'xctest']
 
             if self.manually_start_wda:
-                logger.info("Got param --manually-start-wda , will not launch wda process")
+                logger.info("%s Got param --manually-start-wda , will not launch wda process" %self)
             elif self.use_tidevice:
                 # 明确使用 tidevice 命令启动 wda
                 logger.info("Got param --use-tidevice , use tidevice to launch wda")

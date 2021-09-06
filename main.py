@@ -252,6 +252,10 @@ async def device_watch(wda_directory: str, manually_start_wda: bool, use_tidevic
             d.manually_start_wda = manually_start_wda
             d.use_tidevice = use_tidevice
             d.wda_bundle_pattern = wda_bundle_pattern
+            if event.udid in idevices:
+                old = idevices.pop(event.udid)
+                logger.warning('%s remove previous idb' %old)
+                old.destroy()
             idevices[event.udid] = d
             d.start()
         else:  # offline
