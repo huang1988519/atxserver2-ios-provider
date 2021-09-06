@@ -281,6 +281,7 @@ class WDADevice(object):
     def destroy(self):
         logger.debug("terminate wda processes")
         for p in self._procs:
+            logger.debug(p.args)
             p.terminate()
         self._procs = []
 
@@ -311,7 +312,7 @@ class WDADevice(object):
                     last_ip = self.device_ip
                     await self._callback(self.status_ready, self.__wda_info)
                 await self._sleep(30)
-                logger.debug("%s is fine", self)
+                logger.debug("%s is ok", self.udid)
             else:
                 fail_cnt += 1
                 logger.warning("%s wda ping error: %d", self, fail_cnt)
@@ -405,6 +406,7 @@ class WDADevice(object):
     def restart_wda_proxy(self):
         if self._wda_proxy_proc:
             self._wda_proxy_proc.terminate()
+            time.sleep(3) # 等待释放端口
         self._wda_proxy_port = freeport.get(self._wda_proxy_port)
         logger.debug("restart wdaproxy with port: %d", self._wda_proxy_port)
         self._wda_proxy_proc = subprocess.Popen([
@@ -486,6 +488,7 @@ class WDADevice(object):
             return True
         except Exception as e:
             logger.warning("%s wda screenshot error: %s", self, e)
+            logger.exception(e)
             return False
 
     async def wda_session_ok(self):

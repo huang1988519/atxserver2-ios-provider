@@ -23,8 +23,10 @@ class FreePort(object):
 
     def is_port_in_use(self, port):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            return s.connect_ex(('localhost', port)) == 0
-
+            ret = s.connect_ex(('localhost', port)) == 0
+            if ret:
+                print('%d is using, create new port' %port)
+            return ret
 
 freeport = FreePort()
 
