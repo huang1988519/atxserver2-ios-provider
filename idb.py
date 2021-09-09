@@ -450,8 +450,8 @@ class WDADevice(object):
         """
         try:
             request = httpclient.HTTPRequest(self.wda_device_url + "/status",
-                                             connect_timeout=3,
-                                             request_timeout=15)
+                                             connect_timeout=15,
+                                             request_timeout=40)
             client = httpclient.AsyncHTTPClient()
             resp = await client.fetch(request)
             info = json.loads(resp.body)
