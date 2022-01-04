@@ -55,15 +55,15 @@ def runcommand(*args) -> str:
 
 def list_devices():
     devices = um.device_list()
-    udids = [device['UDID'] for device in devices]
+    udids = [device.udid for device in devices]
     return udids
 
 
 def udid2name(udid: str) -> str:
     devices = um.device_list()
     for device in devices:
-        if device['UDID'] == udid:
-            d = Device(device['UDID'])
+        if device.udid == udid:
+            d = Device(device.udid)
             return d.get_value(no_session=True).get('DeviceName')
     return "Unknown"
 
@@ -75,8 +75,8 @@ def udid2product(udid):
     pt = ""
     devices = um.device_list()
     for device in devices:
-        if device['UDID'] == udid:
-            d = Device(device['UDID'])
+        if device.udid == udid:
+            d = Device(device.udid)
             pt = d.get_value(no_session=True).get('ProductType')
     models = {
         "iPhone5,1": "iPhone 5",
