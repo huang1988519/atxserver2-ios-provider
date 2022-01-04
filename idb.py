@@ -22,8 +22,11 @@ from tornado.concurrent import run_on_executor
 from tornado.ioloop import IOLoop
 
 from freeport import freeport
+from tidevice import Device
+from tidevice._usbmux import Usbmux
 
 DeviceEvent = namedtuple('DeviceEvent', ['present', 'udid'])
+um = Usbmux()
 
 wda_port_cache = {}
 def get_wda_port(udid):
@@ -51,28 +54,30 @@ def runcommand(*args) -> str:
 
 
 def list_devices():
-    udids = runcommand('idevice_id', '-l').splitlines()
-    udid_sim = runcommand('xcrun', 'simctl', 'list', 'devices').splitlines()
-    p = re.compile(r'[(](.*?)[)]', re.S)
-    udids.extend([re.findall(p, i)[-2] for i in udid_sim if 'Booted' in i])
+    devices = um.device_list()
+    udids = [device['UDID'] for device in devices]
     return udids
 
 
 def udid2name(udid: str) -> str:
-    name = runcommand("idevicename", "-u", udid)
-    if not name:  # 模拟器
-        udid_sim = runcommand('xcrun', 'simctl', 'list', 'devices').splitlines()
-        for i in udid_sim:
-            if udid in i:
-                name = i[:i.index('(')].strip()
-    return name if name else udid
+    devices = um.device_list()
+    for device in devices:
+        if device['UDID'] == udid:
+            d = Device(device['UDID'])
+            return d.get_value(no_session=True).get('DeviceName')
+    return "Unknown"
 
 
 def udid2product(udid):
     """
     See also: https://www.theiphonewiki.com/wiki/Models
     """
-    pt = runcommand("ideviceinfo", "--udid", udid, "--key", "ProductType")
+    pt = ""
+    devices = um.device_list()
+    for device in devices:
+        if device['UDID'] == udid:
+            d = Device(device['UDID'])
+            pt = d.get_value(no_session=True).get('ProductType')
     models = {
         "iPhone5,1": "iPhone 5",
         "iPhone5,2": "iPhone 5",
@@ -369,11 +374,6 @@ class WDADevice(object):
                 '-scheme', 'WebDriverAgentRunner', "-destination",
                 'id=' + self.udid, 'test'
             ]
-            if "Simulator" in self.product:  # 模拟器
-                cmd.extend([
-                    'USE_PORT=' + str(self._wda_port),
-                    'MJPEG_SERVER_PORT=' + str(self._mjpeg_port),
-                ])
 
             if os.getenv("TMQ") == "true":
                 cmd = ['tins', '-u', self.udid, 'xctest']
@@ -383,23 +383,22 @@ class WDADevice(object):
             elif self.use_tidevice:
                 # 明确使用 tidevice 命令启动 wda
                 logger.info("Got param --use-tidevice , use tidevice to launch wda")
-                # tidevice_cmd = ['tidevice', '-u', self.udid, 'wdaproxy', '-B', self.wda_bundle_pattern, '--port', '0']
-                tidevice_cmd = ['tidevice', '-u', self.udid, 'wdaproxy', '--port', '0']
-                self.run_background(subprocess.list2cmdline(tidevice_cmd), stdout=subprocess.DEVNULL,
-                                    stderr=subprocess.STDOUT,shell=True)
+                tidevice_cmd = ['tidevice', '-u', self.udid, 'xctest', '-B', self.wda_bundle_pattern]
+                self.run_background(tidevice_cmd, stdout=subprocess.DEVNULL,
+                                    stderr=subprocess.STDOUT)
             else:
                 self.run_background(
                     cmd, stdout=subprocess.DEVNULL,
                     stderr=subprocess.STDOUT)  # cwd='Appium-WebDriverAgent')
-            if "Simulator" not in self.product:
-                self.run_background(
-                    subprocess.list2cmdline(["iproxy",
-                     str(self._wda_port), "8100", '-u',self.udid]),
-                    silent=True,shell=True)
-                self.run_background(
-                    subprocess.list2cmdline(["iproxy",
-                     str(self._mjpeg_port), "9100", '-u', self.udid]),
-                    silent=True,shell=True)
+
+            self.run_background(
+                ["tidevice", '-u', self.udid, 'relay',
+                 str(self._wda_port), "8100"],
+                silent=True)
+            self.run_background(
+                ["tidevice", '-u', self.udid, 'relay',
+                 str(self._mjpeg_port), "9100"],
+                silent=True)
 
             self.restart_wda_proxy()
             return await self.wait_until_ready()
