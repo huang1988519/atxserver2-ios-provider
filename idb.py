@@ -306,12 +306,19 @@ class WDADevice(object):
         last_ip = self.device_ip
         while not self._stop.is_set():
             if await self.wda_status():
+                need_update = False
+                if last_ip != self.device_ip:
+                    last_ip = self.device_ip
+                    need_update = True
+                
                 if fail_cnt != 0:
                     logger.info("wda ping recovered")
                     fail_cnt = 0
-                if last_ip != self.device_ip:
-                    last_ip = self.device_ip
+                    need_update = True
+                
+                if need_update:
                     await self._callback(self.status_ready, self.__wda_info)
+                    
                 await self._sleep(30)
                 logger.debug("%s is ok", self.udid)
             else:
