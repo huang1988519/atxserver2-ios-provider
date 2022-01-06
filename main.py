@@ -321,6 +321,9 @@ if __name__ == "__main__":
         IOLoop.current().run_sync(async_main)
         # IOLoop.instance().start()
     except KeyboardInterrupt:
+        logger.debug('KeyboardInterrupt')
+    finally:
+        logger.debug('atx-ios finished')
         IOLoop.instance().stop()
         for d in idevices.values():
             d.destroy()
