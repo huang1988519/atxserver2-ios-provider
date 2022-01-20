@@ -27,12 +27,13 @@ from typing import Union
 idevices = {}
 hbc = None
 
-def rebot_send(content:str):
+def rebot_send(content:str,scheme ='设备报警',):
+    ip = current_ip()
     webhook = 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=c401a033-b602-4690-bc30-594767159d04'
     body = {
-        'msgtype':'text',
-        'text': {
-            'content':content
+        'msgtype':'markdown',
+        'markdown': {
+            'content': f'**[{scheme}]**<font color="comment">{ip}</font>\n' + '\n>' + content
         }
     }
     import json
@@ -197,6 +198,12 @@ async def _device_callback(d: idb.WDADevice,
     """ monitor device status """
     wd = idb.WDADevice
 
+    # webhook
+    if status in [wd.status_fatal,'offline']:
+        rebot_send(f'{d} <font color="warning">{status}</font>')
+    if status in [wd.status_ready,'online']:
+        rebot_send(f'{d} <font color="info">{status}</font>')
+
     if status == wd.status_preparing:
         await hbc.device_update({
             "udid": d.udid,
@@ -231,6 +238,19 @@ async def _device_callback(d: idb.WDADevice,
             "udid": d.udid,
             "provider": None,
         })
+    elif status == 'online':
+        logger.info(f'{d}: online')
+        await hbc.device_update({
+            "udid": d.udid,
+            "online": True,
+        })
+    elif status == 'offline':
+        logger.info(f'{d}: offline')
+        await hbc.device_update({
+            "udid": d.udid,
+            "provider": None,
+            "online": False,
+        })
     else:
         logger.error("Unknown status: %s", status)
 
@@ -258,10 +278,11 @@ async def device_watch(wda_directory: str, manually_start_wda: bool, use_tidevic
                 old.destroy()
             idevices[event.udid] = d
             d.start()
+            await _device_callback(d,status='online')
         else:  # offline
             await idevices[event.udid].stop()
             idevices.pop(event.udid)
-            rebot_send('【设备离线报警】\nAgent:  %s \niOS:  %s' %(current_ip(),event.udid))
+            await _device_callback(d,status='offline')
 
 
 async def async_main():
