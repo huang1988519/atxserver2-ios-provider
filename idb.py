@@ -423,6 +423,7 @@ class WDADevice(object):
             "--wda-url", "http://localhost:{}".format(self._wda_port),
             "--mjpeg-url", "http://localhost:{}".format(self._mjpeg_port)]),
             stdout=subprocess.DEVNULL,shell=True)  # yapf: disable
+        self._procs.append(self._wda_proxy_proc)
         set_wda_port(self.udid,self._wda_proxy_port)
 
     async def wait_until_ready(self, timeout: float = 60.0) -> bool:
