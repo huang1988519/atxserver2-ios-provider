@@ -265,6 +265,7 @@ class WDADevice(object):
                     
                     os.system(f'tidevice -u {self.udid} reboot')
                     time.sleep(30)
+                    wda_fail_cnt = 0
                     break
 
                 if time.time() - start < 3.0:
