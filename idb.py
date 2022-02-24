@@ -262,7 +262,9 @@ class WDADevice(object):
                 wda_fail_cnt += 1
                 if wda_fail_cnt > 10:
                     logger.error("%s Run WDA failed. -_-!,Restarting", self)
-                    os.system('idevicediagnostics -u %s restart', self.udid)
+                    
+                    os.system(f'tidevice -u {self.udid} reboot')
+                    time.sleep(30)
                     break
 
                 if time.time() - start < 3.0:
