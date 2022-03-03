@@ -24,7 +24,7 @@ import idb
 from utils import current_ip
 from typing import Union
 
-idevices = {}
+
 hbc = None
 
 def rebot_send(content:str,scheme ='设备报警',):
@@ -278,6 +278,7 @@ async def device_watch(wda_directory: str, manually_start_wda: bool, use_tidevic
                 old.destroy()
             idevices[event.udid] = d
             d.start()
+            
             await _device_callback(d,status='online')
         else:  # offline
             await idevices[event.udid].stop()
@@ -339,6 +340,9 @@ async def async_main():
 
 if __name__ == "__main__":
     try:
+        # 所有设备实例，防止全局变量热更新出现孤儿进程
+        idevices = {}
+        
         IOLoop.current().run_sync(async_main)
         # IOLoop.instance().start()
     except KeyboardInterrupt:
