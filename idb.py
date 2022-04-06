@@ -327,7 +327,7 @@ class WDADevice(object):
                 if need_update:
                     await self._callback(self.status_ready, self.__wda_info)
                     
-                await self._sleep(30)
+                await self._sleep(60)
                 logger.debug("%s is ok", self.udid)
             else:
                 fail_cnt += 1

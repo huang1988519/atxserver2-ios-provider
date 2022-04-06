@@ -224,6 +224,7 @@ async def _device_callback(d: idb.WDADevice,
         await hbc.device_update({
             # "colding": False,
             "udid": d.udid,
+            "online": True,
             "provider": {
                 "wdaUrl": "http://{}:{}".format(current_ip(), d.public_port)
             },
